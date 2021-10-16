@@ -3,6 +3,20 @@ const User = require('./../models/userModel');
 const bcrypt = require('bcrypt');
 const catchAsync = require('../utils/catchAsync');
 const AppError = require('../utils/appError');
+const jwt = require('jsonwebtoken');
+
+const issueJWT = (req, res, user) => {
+  const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, {
+    expiresIn: 2 * 24 * 60 * 60 * 1000
+  });
+  // console.log(token);
+  res.cookie('jwt', token, {
+    expires: new Date(
+      Date.now() +  process.env.JWT_COOKIE_EXPIRES * 24 * 60 * 60 *1000
+    )
+  });
+  return token;
+};
 
 //REGISTER
 router.post(
@@ -20,7 +34,8 @@ router.post(
     });
     //saving user to db and returning response
     const user = await newUser.save();
-    res.status(200).json({ user });
+    issueJWT(req, res, user);
+    res.status(200).json({ user, token });
   })
 );
 
@@ -38,9 +53,10 @@ router.post(
     if (!validPassword) {
       return next(new AppError('Incorrect Email or password!', 401));
     }
-
-    res.status(200).json({ user });
+    const token = issueJWT(req, res, user);
+    res.status(200).json({ user, token });
   })
 );
+
 
 module.exports = router;

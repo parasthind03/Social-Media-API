@@ -3,6 +3,7 @@ const mongoose = require('mongoose');
 const dotenv = require('dotenv');
 const helmet = require('helmet');
 const morgan = require('morgan');
+const cookieParser = require('cookie-parser');
 
 const userRouter = require('./routes/usersRoutes');
 const authRouter = require('./routes/authRoutes');
@@ -19,6 +20,8 @@ mongoose.connect(process.env.MONGO_URL, () => {
 
 //middleware
 app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+app.use(cookieParser());
 app.use(helmet());
 app.use(morgan('dev'));
 

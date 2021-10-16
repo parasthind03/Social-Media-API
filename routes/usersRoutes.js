@@ -3,12 +3,14 @@ const bcrypt = require('bcrypt');
 const catchAsync = require('../utils/catchAsync');
 const AppError = require('../utils/appError');
 const User = require('./../models/userModel');
+const protect = require('./../middleware/protect');
 
 //update User
 router.put(
   '/:id',
+  protect,
   catchAsync(async (req, res, next) => {
-    if (req.body.userId === req.params.id) {
+    if (req.user._id === req.params.id) {
       if (req.body.password) {
         const salt = await bcrypt.genSalt(12);
         req.body.password = await bcrypt.hash(req.body.password, salt);
@@ -29,23 +31,21 @@ router.put(
 
 //Delete user
 router.delete(
-  '/:id',
+  '/',
+  protect,
   catchAsync(async (req, res, next) => {
-    if (req.body.userId === req.params.id) {
-      const user = await User.findByIdAndDelete(req.params.id);
-      res.status(204).json({
+      const user = await User.findByIdAndDelete(req.user._id);
+      res.status(200).json({
         status: 'success',
         message: 'Your account has been deleted!'
       });
-    } else {
-      return next(new AppError('You can delete only your account', 401));
-    }
   })
 );
 
 //get a user
 router.get(
   '/:id',
+  protect,
   catchAsync(async (req, res, next) => {
     const user = await User.findById(req.params.id);
     if (!user) {
@@ -63,22 +63,23 @@ router.get(
 //follow a user
 router.put(
   '/:id/follow',
+  protect,
   catchAsync(async (req, res, next) => {
-    if (req.body.userId !== req.params.id) {
-        const user = await User.findById(req.params.id);
-        const currentUser = await User.findById(req.body.userId);
+    if (req.user._id !== req.params.id) {
+      const user = await User.findById(req.params.id);
+      const currentUser = await User.findById(req.user._id);
 
-        if(!user.followers.includes(req.body.userId)){
-            await user.updateOne({$push: {followers: req.body.userId}});
-            await currentUser.updateOne({$push: {following: req.params.id}});
+      if (!user.followers.includes(req.user._id)) {
+        await user.updateOne({ $push: { followers: req.user._id } });
+        await currentUser.updateOne({ $push: { following: req.params.id } });
 
-            res.status(200).json({
-                status: 'success',
-                message: 'You have followed the user!'
-            })
-        } else{
-            return next(new AppError('You already follow this user', 403));
-        }
+        res.status(200).json({
+          status: 'success',
+          message: 'You have followed the user!'
+        });
+      } else {
+        return next(new AppError('You already follow this user', 403));
+      }
     } else {
       return next(new AppError('You cannot follow yourself!', 403));
     }
@@ -87,28 +88,28 @@ router.put(
 
 //unfollow a user
 router.put(
-    '/:id/unfollow',
-    catchAsync(async (req, res, next) => {
-      if (req.body.userId !== req.params.id) {
-          const user = await User.findById(req.params.id);
-          const currentUser = await User.findById(req.body.userId);
-  
-          if(user.followers.includes(req.body.userId)){
-              await user.updateOne({$pull: {followers: req.body.userId}});
-              await currentUser.updateOne({$pull: {following: req.params.id}});
-  
-              res.status(200).json({
-                  status: 'success',
-                  message: 'You have unfollowed the user!'
-              })
-          } else{
-              return next(new AppError('You have already unfollowed this user', 403));
-          }
+  '/:id/unfollow',
+  protect,
+  catchAsync(async (req, res, next) => {
+    if (req.user._id !== req.params.id) {
+      const user = await User.findById(req.params.id);
+      const currentUser = await User.findById(req.user._id);
+
+      if (user.followers.includes(req.user._id)) {
+        await user.updateOne({ $pull: { followers: req.user._id } });
+        await currentUser.updateOne({ $pull: { following: req.params.id } });
+
+        res.status(200).json({
+          status: 'success',
+          message: 'You have unfollowed the user!'
+        });
       } else {
-        return next(new AppError('You cannot unfollow yourself!', 403));
+        return next(new AppError('You have already unfollowed this user', 403));
       }
-    })
-  );
-  
+    } else {
+      return next(new AppError('You cannot unfollow yourself!', 403));
+    }
+  })
+);
 
 module.exports = router;
