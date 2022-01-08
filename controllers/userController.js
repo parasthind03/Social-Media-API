@@ -43,7 +43,9 @@ exports.deleteUser = async (req, res, next) => {
 
 exports.getUser = async (req, res, next) => {
 	try {
-		const user = await User.findById(req.params.id);
+		const user = await User.findById(req.params.id)
+			.populate({path: 'following', select: 'username email profilePicture'})
+			.populate({path: 'followers', select: 'username email profilePicture'});
 		if (!user) {
 			throw new Error('There is no user with this id');
 		}
