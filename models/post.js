@@ -11,10 +11,12 @@ const postSchema = new mongoose.Schema(
 			max: 500
 		},
 		img: String,
-		likes: {
-			type: Array,
-			default: []
-		}
+		likes: [
+			{
+				type: mongoose.Schema.ObjectId,
+        ref: 'User'
+			}
+		]
 	},
 	{
 		timestamps: true

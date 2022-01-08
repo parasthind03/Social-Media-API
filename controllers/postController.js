@@ -20,7 +20,7 @@ exports.create = async (req, res, next) => {
 exports.updatePost = async (req, res, next) => {
 	try {
 		const post = await Post.findById(req.params.id);
-		if (post.userId === req.user._id) {
+		if (post.userId === req.user.id) {
 			await post.updateOne({ $set: req.body });
 			res.status(200).json({
 				status: 'success',
@@ -40,7 +40,7 @@ exports.updatePost = async (req, res, next) => {
 exports.deletePost = async (req, res, next) => {
 	try {
 		const post = await Post.findById(req.params.id);
-		if (post.userId === req.user._id) {
+		if (post.userId === req.user.id) {
 			await post.deleteOne();
 			res.status(200).json({
 				status: 'success',
@@ -63,14 +63,14 @@ exports.toggleLike = async (req, res, next) => {
 		if (!post) {
 			throw new Error('The user has deleted this post');
 		}
-		if (!post.likes.includes(req.user._id)) {
-			await post.updateOne({ $push: { likes: req.user._id } });
+		if (!post.likes.includes(req.user.id)) {
+			await post.updateOne({ $push: { likes: req.user.id } });
 			res.status(200).json({
 				status: 'success',
 				message: 'You have liked the post'
 			});
 		} else {
-			await post.updateOne({ $pull: { likes: req.user._id } });
+			await post.updateOne({ $pull: { likes: req.user.id } });
 			res.status(200).json({
 				status: 'success',
 				message: 'You have disliked the post'
@@ -86,7 +86,7 @@ exports.toggleLike = async (req, res, next) => {
 
 exports.getPost = async (req, res, next) => {
 	try {
-		const post = await Post.findById(req.params.id);
+		const post = await Post.findById(req.params.id).populate({path: 'likes', select: 'username email profilePicture'});
 		if (!post) {
 			throw new Error('The post is no longer available!');
 		} else {
